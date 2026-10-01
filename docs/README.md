@@ -1,6 +1,10 @@
 # Sud Ouest — Modération des commentaires
 
-**Une session de dev, de 9h45 à 12h15**
+**1ère session de dev, de 9h45 à 12h15: la demande sans option**
+
+**2eme session de dev, de 14h45 à 16h20: option modération manuelle et gestion des utilisateurs bannis + Frontend**
+
+***
 
 Lancement : `make build` +  `make up`
 

@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SudOuest\Comment\Application\Command\UnbanAuthor;
+
+use Symfony\Component\Validator\Constraints as Assert;
+
+final readonly class UnbanAuthorCommand
+{
+    public function __construct(
+        #[Assert\NotBlank]
+        #[Assert\Length(max: 255)]
+        public string $authorId,
+    ) {
+    }
+}

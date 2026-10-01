@@ -10,4 +10,5 @@ enum StatusChangeOrigin: string
     case AuthorBan = 'author_ban';
     case Llm = 'llm';
     case Operator = 'operator';
+    case AuthorUnban = 'author_unban';
 }

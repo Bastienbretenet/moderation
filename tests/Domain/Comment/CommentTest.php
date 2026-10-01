@@ -11,6 +11,7 @@ use SudOuest\Comment\Domain\Author\Author;
 use SudOuest\Comment\Domain\Comment\Comment;
 use SudOuest\Comment\Domain\Comment\CommentStatusChange;
 use SudOuest\Comment\Domain\Comment\Exception\CommentAlreadyModeratedException;
+use SudOuest\Comment\Domain\Comment\Exception\CommentNotRejectedForAuthorBanException;
 use SudOuest\Comment\Domain\Comment\Exception\CommentStatusUnchangedException;
 use SudOuest\Comment\Domain\Comment\IllegalContentCategory;
 use SudOuest\Comment\Domain\Comment\ModerationStatus;
@@ -167,6 +168,60 @@ final class CommentTest extends TestCase
         $this->expectException(CommentStatusUnchangedException::class);
 
         $comment->rejectManually('Spam.', new DateTimeImmutable());
+    }
+
+    public function testCommentRejectedForAuthorBanIsResubmittedForModeration(): void
+    {
+        $submittedAt = new DateTimeImmutable('2026-10-01 10:00:00');
+        $resubmittedAt = new DateTimeImmutable('2026-10-02 10:00:00');
+        $bannedAuthor = new Author(Uuid::v7(), 'user-42');
+        $bannedAuthor->ban(new DateTimeImmutable('2026-09-01 10:00:00'));
+        $comment = self::submitComment($bannedAuthor, $submittedAt);
+
+        $comment->resubmitForModeration($resubmittedAt);
+
+        self::assertSame(ModerationStatus::Pending, $comment->status());
+        self::assertNull($comment->rejectionReason());
+        self::assertNull($comment->moderatedAt());
+        self::assertStatusHistory(
+            [
+                [null, ModerationStatus::Rejected, StatusChangeOrigin::AuthorBan, null, $submittedAt],
+                [ModerationStatus::Rejected, ModerationStatus::Pending, StatusChangeOrigin::AuthorUnban, null, $resubmittedAt],
+            ],
+            $comment,
+        );
+    }
+
+    /**
+     * @return iterable<string, array{callable(Comment): void}>
+     */
+    public static function notRejectedForAuthorBanProvider(): iterable
+    {
+        yield 'pending' => [static function (Comment $comment): void {
+        }];
+        yield 'rejected for illegal content' => [static function (Comment $comment): void {
+            $comment->applyModerationDecision(
+                ModerationDecision::reject(IllegalContentCategory::Insult, 'Injure.'),
+                new DateTimeImmutable(),
+            );
+        }];
+        yield 'rejected by an operator' => [static function (Comment $comment): void {
+            $comment->rejectManually('Hors sujet.', new DateTimeImmutable());
+        }];
+    }
+
+    /**
+     * @param callable(Comment): void $moderate
+     */
+    #[DataProvider('notRejectedForAuthorBanProvider')]
+    public function testOnlyCommentsRejectedForAuthorBanCanBeResubmitted(callable $moderate): void
+    {
+        $comment = self::submitComment();
+        $moderate($comment);
+
+        $this->expectException(CommentNotRejectedForAuthorBanException::class);
+
+        $comment->resubmitForModeration(new DateTimeImmutable());
     }
 
     /**

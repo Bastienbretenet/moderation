@@ -10,6 +10,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use SudOuest\Comment\Domain\Author\Author;
 use SudOuest\Comment\Domain\Comment\Exception\CommentAlreadyModeratedException;
+use SudOuest\Comment\Domain\Comment\Exception\CommentNotRejectedForAuthorBanException;
 use SudOuest\Comment\Domain\Comment\Exception\CommentStatusUnchangedException;
 use SudOuest\Comment\Domain\Moderation\ModerationDecision;
 use Symfony\Component\Uid\Uuid;
@@ -118,6 +119,20 @@ final class Comment
         $this->rejectionReason = RejectionReason::Operator;
         $this->category = null;
         $this->changeStatus(ModerationStatus::Rejected, StatusChangeOrigin::Operator, $reason, $changedAt);
+    }
+
+    public function resubmitForModeration(DateTimeImmutable $resubmittedAt): void
+    {
+        if ($this->rejectionReason !== RejectionReason::AuthorBanned) {
+            throw CommentNotRejectedForAuthorBanException::withId($this->id);
+        }
+
+        $previousStatus = $this->status;
+
+        $this->status = ModerationStatus::Pending;
+        $this->rejectionReason = null;
+        $this->moderatedAt = null;
+        $this->recordStatusChange($previousStatus, StatusChangeOrigin::AuthorUnban, null, $resubmittedAt);
     }
 
     public function isPending(): bool

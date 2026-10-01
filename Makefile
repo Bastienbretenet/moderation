@@ -1,4 +1,4 @@
-.PHONY: build up bash test
+.PHONY: build up bash test fixtures
 
 build:
 	docker compose build
@@ -11,3 +11,6 @@ bash:
 
 test:
 	docker compose exec php vendor/bin/phpunit
+
+fixtures:
+	docker compose exec php php bin/console doctrine:fixtures:load --no-interaction

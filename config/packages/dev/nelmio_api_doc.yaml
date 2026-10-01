@@ -2,11 +2,11 @@ nelmio_api_doc:
     use_validation_groups: true
     documentation:
         info:
-            title: API Skeleton
-            description: API skeleton
+            title: Comment API
+            description: Collecte et modération des commentaires publiés sur les marques du groupe.
             version: '%env(resolve:REVISION)%'
         servers:
-            -   url: http://localhost
+            -   url: http://localhost:8080
                 description: Local
     areas:
         Health:

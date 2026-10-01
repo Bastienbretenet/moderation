@@ -1,6 +1,5 @@
 parameters:
     env(APP_ENV): ''
-    env(APP_NAME): 'skeleton'
     env(REVISION): '1.0.0'
     env(APP_SECRET): ''
     env(DATABASE_URL): ''

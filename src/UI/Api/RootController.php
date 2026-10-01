@@ -22,7 +22,7 @@ final readonly class RootController
     public function __invoke(): JsonResponse
     {
         $data = [
-            'message' => 'API Skeleton.',
+            'message' => 'Sud Ouest Comment API.',
             'version' => $this->revision,
         ];
 

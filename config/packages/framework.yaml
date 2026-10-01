@@ -4,3 +4,11 @@ framework:
     session: true
     php_errors:
         log: true
+
+    http_client:
+        scoped_clients:
+            openrouter.client:
+                base_uri: 'https://openrouter.ai/api/v1/'
+                headers:
+                    Authorization: 'Bearer %env(OPENROUTER_API_KEY)%'
+                max_duration: '%env(float:OPENROUTER_TIMEOUT)%'

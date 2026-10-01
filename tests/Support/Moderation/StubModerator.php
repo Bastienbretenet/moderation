@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SudOuest\Comment\Infrastructure\Moderation;
+namespace SudOuest\Comment\Tests\Support\Moderation;
 
 use LogicException;
 use SudOuest\Comment\Domain\Comment\IllegalContentCategory;

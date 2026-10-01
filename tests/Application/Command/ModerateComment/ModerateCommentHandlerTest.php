@@ -12,6 +12,7 @@ use SudOuest\Comment\Application\Command\ModerateComment\ModerateCommentHandler;
 use SudOuest\Comment\Domain\Comment\Comment;
 use SudOuest\Comment\Domain\Comment\IllegalContentCategory;
 use SudOuest\Comment\Domain\Comment\ModerationStatus;
+use SudOuest\Comment\Domain\Moderation\Exception\ModerationFailedException;
 use SudOuest\Comment\Domain\Moderation\Exception\ModerationUnavailableException;
 use SudOuest\Comment\Domain\Moderation\ModerationDecision;
 use SudOuest\Comment\Domain\Moderation\Moderator;
@@ -76,6 +77,21 @@ final class ModerateCommentHandlerTest extends KernelTestCase
             $this->handle($moderator, $comment);
             self::fail('The moderation failure must be propagated so the message is retried.');
         } catch (ModerationUnavailableException) {
+        }
+
+        self::assertSame(ModerationStatus::Pending, $this->reloadComment($comment)->status());
+    }
+
+    public function testPermanentModerationFailureIsNotRetried(): void
+    {
+        $comment = $this->persistPendingComment();
+        $moderator = $this->createStub(Moderator::class);
+        $moderator->method('moderate')->willThrowException(ModerationFailedException::because('invalid response'));
+
+        try {
+            $this->handle($moderator, $comment);
+            self::fail('A permanent moderation failure must not be retried.');
+        } catch (UnrecoverableMessageHandlingException) {
         }
 
         self::assertSame(ModerationStatus::Pending, $this->reloadComment($comment)->status());

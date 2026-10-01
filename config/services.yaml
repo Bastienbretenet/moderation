@@ -17,3 +17,8 @@ services:
 
     SudOuest\Comment\:
         resource: '../src/'
+
+when@test:
+    services:
+        SudOuest\Comment\Tests\Support\Moderation\StubModerator: ~
+        SudOuest\Comment\Domain\Moderation\Moderator: '@SudOuest\Comment\Tests\Support\Moderation\StubModerator'

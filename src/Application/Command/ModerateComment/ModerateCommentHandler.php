@@ -7,6 +7,7 @@ namespace SudOuest\Comment\Application\Command\ModerateComment;
 use Psr\Clock\ClockInterface;
 use SudOuest\Comment\Domain\Comment\CommentRepository;
 use SudOuest\Comment\Domain\Comment\Exception\CommentNotFoundException;
+use SudOuest\Comment\Domain\Moderation\Exception\ModerationFailedException;
 use SudOuest\Comment\Domain\Moderation\Moderator;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
@@ -44,7 +45,12 @@ final readonly class ModerateCommentHandler
             return;
         }
 
-        $decision = $this->moderator->moderate($comment->content());
+        try {
+            $decision = $this->moderator->moderate($comment->content());
+        } catch (ModerationFailedException $moderationFailed) {
+            throw new UnrecoverableMessageHandlingException($moderationFailed->getMessage(), previous: $moderationFailed);
+        }
+
         $comment->applyModerationDecision($decision, $this->clock->now());
 
         $this->commentRepository->save($comment);

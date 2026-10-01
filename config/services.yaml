@@ -15,5 +15,5 @@ services:
             calls:
                 - [ 'setSerializer', [ ] ]
 
-    Gsoi\Skeleton\:
+    SudOuest\Comment\:
         resource: '../src/'

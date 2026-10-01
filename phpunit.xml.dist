@@ -15,6 +15,7 @@
         <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
+        <server name="KERNEL_CLASS" value="SudOuest\Comment\Infrastructure\Framework\Symfony\Kernel" />
     </php>
 
     <testsuites>
@@ -31,8 +32,8 @@
 
     <extensions>
         <bootstrap class="Symfony\Bridge\PhpUnit\SymfonyExtension">
-            <parameter name="clock-mock-namespaces" value="Gsoi\Skeleton" />
-            <parameter name="dns-mock-namespaces" value="Gsoi\Skeleton" />
+            <parameter name="clock-mock-namespaces" value="SudOuest\Comment" />
+            <parameter name="dns-mock-namespaces" value="SudOuest\Comment" />
         </bootstrap>
     </extensions>
 </phpunit>

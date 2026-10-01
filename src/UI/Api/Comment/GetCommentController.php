@@ -6,7 +6,7 @@ namespace SudOuest\Comment\UI\Api\Comment;
 
 use Nelmio\ApiDocBundle\Attribute\Model;
 use OpenApi\Attributes as OA;
-use SudOuest\Comment\Application\Query\GetComment\CommentView;
+use SudOuest\Comment\Application\Query\CommentView;
 use SudOuest\Comment\Application\Query\GetComment\GetCommentQuery;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;

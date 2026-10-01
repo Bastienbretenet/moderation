@@ -11,4 +11,9 @@ interface CommentRepository
     public function save(Comment $comment): void;
 
     public function findById(Uuid $id): ?Comment;
+
+    /**
+     * Newest first; comments submitted at the same time are ordered by identifier.
+     */
+    public function search(CommentSearchCriteria $criteria): CommentSearchResult;
 }

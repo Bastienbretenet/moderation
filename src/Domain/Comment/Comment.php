@@ -13,8 +13,10 @@ use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'comment')]
-#[ORM\Index(name: 'comment_publisher_status_idx', columns: ['publisher', 'status'])]
-#[ORM\Index(name: 'comment_status_idx', columns: ['status'])]
+#[ORM\Index(name: 'comment_publisher_status_submitted_at_idx', columns: ['publisher', 'status', 'submitted_at'])]
+#[ORM\Index(name: 'comment_status_submitted_at_idx', columns: ['status', 'submitted_at'])]
+#[ORM\Index(name: 'comment_submitted_at_idx', columns: ['submitted_at'])]
+#[ORM\Index(name: 'comment_source_idx', columns: ['source'])]
 final class Comment
 {
     #[ORM\Column(length: 32, enumType: ModerationStatus::class)]

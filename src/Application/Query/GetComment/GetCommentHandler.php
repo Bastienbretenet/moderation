@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SudOuest\Comment\Application\Query\GetComment;
 
+use SudOuest\Comment\Application\Query\CommentView;
 use SudOuest\Comment\Domain\Comment\CommentRepository;
 use SudOuest\Comment\Domain\Comment\Exception\CommentNotFoundException;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SudOuest\Comment\Application\Query\GetComment;
+namespace SudOuest\Comment\Application\Query;
 
 use DateTimeInterface;
 use SudOuest\Comment\Domain\Comment\Comment;

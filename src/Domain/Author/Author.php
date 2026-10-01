@@ -34,6 +34,11 @@ final class Author
         return $this->externalId;
     }
 
+    public function ban(DateTimeImmutable $bannedAt): void
+    {
+        $this->bannedAt = $bannedAt;
+    }
+
     public function isBanned(): bool
     {
         return $this->bannedAt !== null;

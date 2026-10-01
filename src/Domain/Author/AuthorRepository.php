@@ -6,7 +6,5 @@ namespace SudOuest\Comment\Domain\Author;
 
 interface AuthorRepository
 {
-    public function findByExternalId(string $externalId): ?Author;
-
-    public function save(Author $author): void;
+    public function findOrCreateByExternalId(string $externalId): Author;
 }

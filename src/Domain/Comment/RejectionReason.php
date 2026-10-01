@@ -8,4 +8,5 @@ enum RejectionReason: string
 {
     case AuthorBanned = 'author_banned';
     case IllegalContent = 'illegal_content';
+    case Operator = 'operator';
 }

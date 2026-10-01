@@ -6,6 +6,7 @@ namespace SudOuest\Comment\Domain\Author;
 
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
+use SudOuest\Comment\Domain\Author\Exception\AuthorBanUnchangedException;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
@@ -36,11 +37,29 @@ final class Author
 
     public function ban(DateTimeImmutable $bannedAt): void
     {
+        if ($this->isBanned()) {
+            throw AuthorBanUnchangedException::alreadyBanned($this->externalId);
+        }
+
         $this->bannedAt = $bannedAt;
+    }
+
+    public function unban(): void
+    {
+        if (!$this->isBanned()) {
+            throw AuthorBanUnchangedException::notBanned($this->externalId);
+        }
+
+        $this->bannedAt = null;
     }
 
     public function isBanned(): bool
     {
         return $this->bannedAt !== null;
+    }
+
+    public function bannedAt(): ?DateTimeImmutable
+    {
+        return $this->bannedAt;
     }
 }

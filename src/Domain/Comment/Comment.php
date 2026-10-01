@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace SudOuest\Comment\Domain\Comment;
 
 use DateTimeImmutable;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use SudOuest\Comment\Domain\Author\Author;
 use SudOuest\Comment\Domain\Comment\Exception\CommentAlreadyModeratedException;
+use SudOuest\Comment\Domain\Comment\Exception\CommentNotRejectedForAuthorBanException;
+use SudOuest\Comment\Domain\Comment\Exception\CommentStatusUnchangedException;
 use SudOuest\Comment\Domain\Moderation\ModerationDecision;
 use Symfony\Component\Uid\Uuid;
 
@@ -34,6 +38,17 @@ final class Comment
     #[ORM\Column(nullable: true)]
     private ?DateTimeImmutable $moderatedAt = null;
 
+    /**
+     * @var Collection<int, CommentStatusChange>
+     */
+    #[ORM\OneToMany(targetEntity: CommentStatusChange::class, mappedBy: 'comment', cascade: ['persist'])]
+    #[ORM\OrderBy(['changedAt' => 'ASC', 'id' => 'ASC'])]
+    private Collection $statusHistory;
+
+    #[ORM\Version]
+    #[ORM\Column(type: 'integer', options: ['default' => 1])]
+    private int $version = 1;
+
     private function __construct(
         #[ORM\Id]
         #[ORM\Column(type: 'uuid', unique: true)]
@@ -50,6 +65,7 @@ final class Comment
         #[ORM\Column]
         private DateTimeImmutable $submittedAt,
     ) {
+        $this->statusHistory = new ArrayCollection();
     }
 
     public static function submit(
@@ -66,7 +82,12 @@ final class Comment
             $comment->status = ModerationStatus::Rejected;
             $comment->rejectionReason = RejectionReason::AuthorBanned;
             $comment->moderatedAt = $submittedAt;
+            $comment->recordStatusChange(null, StatusChangeOrigin::AuthorBan, null, $submittedAt);
+
+            return $comment;
         }
+
+        $comment->recordStatusChange(null, StatusChangeOrigin::Submission, null, $submittedAt);
 
         return $comment;
     }
@@ -82,27 +103,36 @@ final class Comment
         $this->reject($decision->illegalContentCategory, $decision->explanation, $moderatedAt);
     }
 
-    public function publish(string $explanation, DateTimeImmutable $moderatedAt): void
+    public function publishManually(?string $reason, DateTimeImmutable $changedAt): void
     {
-        $this->assertPending();
+        $this->assertStatusDiffersFrom(ModerationStatus::Published);
 
-        $this->status = ModerationStatus::Published;
-        $this->moderationExplanation = $explanation;
-        $this->moderatedAt = $moderatedAt;
+        $this->rejectionReason = null;
+        $this->category = null;
+        $this->changeStatus(ModerationStatus::Published, StatusChangeOrigin::Operator, $reason, $changedAt);
     }
 
-    public function reject(
-        IllegalContentCategory $category,
-        string $explanation,
-        DateTimeImmutable $moderatedAt,
-    ): void {
-        $this->assertPending();
+    public function rejectManually(?string $reason, DateTimeImmutable $changedAt): void
+    {
+        $this->assertStatusDiffersFrom(ModerationStatus::Rejected);
 
-        $this->status = ModerationStatus::Rejected;
-        $this->rejectionReason = RejectionReason::IllegalContent;
-        $this->category = $category;
-        $this->moderationExplanation = $explanation;
-        $this->moderatedAt = $moderatedAt;
+        $this->rejectionReason = RejectionReason::Operator;
+        $this->category = null;
+        $this->changeStatus(ModerationStatus::Rejected, StatusChangeOrigin::Operator, $reason, $changedAt);
+    }
+
+    public function resubmitForModeration(DateTimeImmutable $resubmittedAt): void
+    {
+        if ($this->rejectionReason !== RejectionReason::AuthorBanned) {
+            throw CommentNotRejectedForAuthorBanException::withId($this->id);
+        }
+
+        $previousStatus = $this->status;
+
+        $this->status = ModerationStatus::Pending;
+        $this->rejectionReason = null;
+        $this->moderatedAt = null;
+        $this->recordStatusChange($previousStatus, StatusChangeOrigin::AuthorUnban, null, $resubmittedAt);
     }
 
     public function isPending(): bool
@@ -165,10 +195,75 @@ final class Comment
         return $this->moderatedAt;
     }
 
+    /**
+     * @return list<CommentStatusChange>
+     */
+    public function statusHistory(): array
+    {
+        return array_values($this->statusHistory->toArray());
+    }
+
+    private function publish(string $explanation, DateTimeImmutable $moderatedAt): void
+    {
+        $this->assertPending();
+
+        $this->changeStatus(ModerationStatus::Published, StatusChangeOrigin::Llm, $explanation, $moderatedAt);
+    }
+
+    private function reject(
+        IllegalContentCategory $category,
+        string $explanation,
+        DateTimeImmutable $moderatedAt,
+    ): void {
+        $this->assertPending();
+
+        $this->rejectionReason = RejectionReason::IllegalContent;
+        $this->category = $category;
+        $this->changeStatus(ModerationStatus::Rejected, StatusChangeOrigin::Llm, $explanation, $moderatedAt);
+    }
+
+    private function changeStatus(
+        ModerationStatus $newStatus,
+        StatusChangeOrigin $origin,
+        ?string $reason,
+        DateTimeImmutable $changedAt,
+    ): void {
+        $previousStatus = $this->status;
+
+        $this->status = $newStatus;
+        $this->moderationExplanation = $reason;
+        $this->moderatedAt = $changedAt;
+        $this->recordStatusChange($previousStatus, $origin, $reason, $changedAt);
+    }
+
+    private function recordStatusChange(
+        ?ModerationStatus $previousStatus,
+        StatusChangeOrigin $origin,
+        ?string $reason,
+        DateTimeImmutable $changedAt,
+    ): void {
+        $this->statusHistory->add(new CommentStatusChange(
+            Uuid::v7(),
+            $this,
+            $previousStatus,
+            $this->status,
+            $origin,
+            $reason,
+            $changedAt,
+        ));
+    }
+
     private function assertPending(): void
     {
         if (!$this->isPending()) {
             throw CommentAlreadyModeratedException::withId($this->id);
+        }
+    }
+
+    private function assertStatusDiffersFrom(ModerationStatus $requestedStatus): void
+    {
+        if ($this->status === $requestedStatus) {
+            throw CommentStatusUnchangedException::withStatus($this->id, $requestedStatus);
         }
     }
 }

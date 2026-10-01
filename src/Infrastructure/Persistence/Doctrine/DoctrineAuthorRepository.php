@@ -18,6 +18,11 @@ final readonly class DoctrineAuthorRepository implements AuthorRepository
     ) {
     }
 
+    public function findByExternalId(string $externalId): ?Author
+    {
+        return $this->entityManager->getRepository(Author::class)->findOneBy(['externalId' => $externalId]);
+    }
+
     public function findOrCreateByExternalId(string $externalId): Author
     {
         $author = $this->findByExternalId($externalId);
@@ -35,8 +40,9 @@ final readonly class DoctrineAuthorRepository implements AuthorRepository
             ?? throw new LogicException(sprintf('Author "%s" should exist after insertion.', $externalId));
     }
 
-    private function findByExternalId(string $externalId): ?Author
+    public function save(Author $author): void
     {
-        return $this->entityManager->getRepository(Author::class)->findOneBy(['externalId' => $externalId]);
+        $this->entityManager->persist($author);
+        $this->entityManager->flush();
     }
 }

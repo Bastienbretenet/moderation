@@ -10,6 +10,7 @@ use Doctrine\Persistence\ObjectManager;
 use SudOuest\Comment\Domain\Author\Author;
 use SudOuest\Comment\Domain\Comment\Comment;
 use SudOuest\Comment\Domain\Comment\IllegalContentCategory;
+use SudOuest\Comment\Domain\Moderation\ModerationDecision;
 use Symfony\Component\Uid\Uuid;
 
 final class DemoFixtures implements ORMFixtureInterface
@@ -29,7 +30,10 @@ final class DemoFixtures implements ORMFixtureInterface
             'Article très complet, merci pour ce travail.',
             new DateTimeImmutable('2026-09-30 08:00:00'),
         );
-        $publishedComment->publish('Avis sur l\'article, aucun contenu illicite.', new DateTimeImmutable('2026-09-30 08:00:05'));
+        $publishedComment->applyModerationDecision(
+            ModerationDecision::approve('Avis sur l\'article, aucun contenu illicite.'),
+            new DateTimeImmutable('2026-09-30 08:00:05'),
+        );
 
         $illegalContentComment = Comment::submit(
             Uuid::v7(),
@@ -39,10 +43,26 @@ final class DemoFixtures implements ORMFixtureInterface
             'Commentaire injurieux envers un autre lecteur.',
             new DateTimeImmutable('2026-09-30 09:00:00'),
         );
-        $illegalContentComment->reject(
-            IllegalContentCategory::Insult,
-            'Expression outrageante visant une personne identifiable.',
+        $illegalContentComment->applyModerationDecision(
+            ModerationDecision::reject(IllegalContentCategory::Insult, 'Expression outrageante visant une personne identifiable.'),
             new DateTimeImmutable('2026-09-30 09:00:05'),
+        );
+
+        $overruledComment = Comment::submit(
+            Uuid::v7(),
+            'sudouest',
+            'article-456',
+            $regularAuthor,
+            'Ce maire est un incapable, il faut voter contre lui.',
+            new DateTimeImmutable('2026-09-30 09:30:00'),
+        );
+        $overruledComment->applyModerationDecision(
+            ModerationDecision::reject(IllegalContentCategory::Insult, 'Terme méprisant visant un élu.'),
+            new DateTimeImmutable('2026-09-30 09:30:05'),
+        );
+        $overruledComment->publishManually(
+            'Critique politique d\'un élu, rejet automatique abusif.',
+            new DateTimeImmutable('2026-09-30 14:00:00'),
         );
 
         $bannedAuthorComment = Comment::submit(
@@ -67,7 +87,7 @@ final class DemoFixtures implements ORMFixtureInterface
             $manager->persist($author);
         }
 
-        foreach ([$publishedComment, $illegalContentComment, $bannedAuthorComment, $pendingComment] as $comment) {
+        foreach ([$publishedComment, $illegalContentComment, $overruledComment, $bannedAuthorComment, $pendingComment] as $comment) {
             $manager->persist($comment);
         }
 

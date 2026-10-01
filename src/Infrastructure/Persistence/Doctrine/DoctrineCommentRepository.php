@@ -6,10 +6,13 @@ namespace SudOuest\Comment\Infrastructure\Persistence\Doctrine;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
+use SudOuest\Comment\Domain\Author\Author;
 use SudOuest\Comment\Domain\Comment\Comment;
 use SudOuest\Comment\Domain\Comment\CommentRepository;
 use SudOuest\Comment\Domain\Comment\CommentSearchCriteria;
 use SudOuest\Comment\Domain\Comment\CommentSearchResult;
+use SudOuest\Comment\Domain\Comment\RejectionReason;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Uid\Uuid;
 
 final readonly class DoctrineCommentRepository implements CommentRepository
@@ -30,23 +33,26 @@ final readonly class DoctrineCommentRepository implements CommentRepository
         return $this->entityManager->find(Comment::class, $id);
     }
 
+    public function findRejectedBecauseAuthorBanned(Author $author): array
+    {
+        return $this->fetchComments($this->entityManager->createQueryBuilder()
+            ->select('comment')
+            ->from(Comment::class, 'comment')
+            ->where('comment.author = :authorId')
+            ->andWhere('comment.rejectionReason = :rejectionReason')
+            ->setParameter('authorId', $author->id(), UuidType::NAME)
+            ->setParameter('rejectionReason', RejectionReason::AuthorBanned)
+            ->orderBy('comment.submittedAt', 'ASC'));
+    }
+
     public function search(CommentSearchCriteria $criteria): CommentSearchResult
     {
-        $results = $this->createFilteredQueryBuilder($criteria)
+        $comments = $this->fetchComments($this->createFilteredQueryBuilder($criteria)
             ->addSelect('author')
             ->orderBy('comment.submittedAt', 'DESC')
             ->addOrderBy('comment.id', 'DESC')
             ->setFirstResult($criteria->offset())
-            ->setMaxResults($criteria->limit)
-            ->getQuery()
-            ->getResult();
-
-        $comments = [];
-        foreach ((array) $results as $comment) {
-            if ($comment instanceof Comment) {
-                $comments[] = $comment;
-            }
-        }
+            ->setMaxResults($criteria->limit));
 
         $total = (int) $this->createFilteredQueryBuilder($criteria)
             ->select('COUNT(comment.id)')
@@ -54,6 +60,21 @@ final readonly class DoctrineCommentRepository implements CommentRepository
             ->getSingleScalarResult();
 
         return new CommentSearchResult($comments, $total);
+    }
+
+    /**
+     * @return list<Comment>
+     */
+    private function fetchComments(QueryBuilder $queryBuilder): array
+    {
+        $comments = [];
+        foreach ((array) $queryBuilder->getQuery()->getResult() as $comment) {
+            if ($comment instanceof Comment) {
+                $comments[] = $comment;
+            }
+        }
+
+        return $comments;
     }
 
     private function createFilteredQueryBuilder(CommentSearchCriteria $criteria): QueryBuilder

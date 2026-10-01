@@ -50,11 +50,16 @@ Le worker garde le code en mémoire : après une modification du code, lancer `d
 | --- | --- | --- |
 | `POST` | `/comments` | Soumet un commentaire. Répond `202` avec son `id`. |
 | `GET` | `/comments/{id}` | Détail d'un commentaire, dont son statut de modération. |
+| `PATCH` | `/comments/{id}/status` | Modération manuelle : un opérateur choisit `published` ou `rejected`, avec un motif optionnel ([choix](docs/manual-moderation.md)). |
+| `GET` | `/comments/{id}/status-history` | Historique de tous les changements de statut (soumission, ban, débannissement, LLM, opérateur). |
+| `POST` | `/authors/{authorId}/ban` | Bannit un auteur, même inconnu : ses nouveaux commentaires sont rejetés sans LLM ([choix](docs/author-ban.md)). |
+| `POST` | `/authors/{authorId}/unban` | Débannit un auteur et renvoie en modération LLM ses commentaires rejetés pour ban. |
+| `GET` | `/authors/{authorId}` | État de bannissement d'un auteur. |
 | `GET` | `/comments` | Recherche paginée. Filtres : `publisher`, `status` (`pending`, `published`, `rejected`), `source`, `authorId`. Pagination : `page` (défaut 1), `limit` (défaut 20, max 100). |
 | `GET` | `/` | Nom et version de l'API. |
 | `GET` | `/health` | Health check. |
 
-Paramètres invalides : `422`. Commentaire inconnu : `404`.
+Paramètres invalides : `422`. Commentaire ou auteur inconnu : `404`. Action sans effet (modération manuelle vers le statut actuel, bannir un banni, débannir un non-banni) ou modification concurrente : `409`.
 
 ```bash
 # Soumettre un commentaire
@@ -67,6 +72,14 @@ curl -s -X POST http://localhost:8080/comments -H 'Content-Type: application/jso
 
 # Rechercher
 curl -s 'http://localhost:8080/comments?publisher=sudouest&status=published'
+
+# Modérer manuellement, puis consulter l'historique
+curl -s -X PATCH http://localhost:8080/comments/<id>/status -H 'Content-Type: application/json' \
+  -d '{"status":"published","reason":"Critique légitime."}'
+curl -s http://localhost:8080/comments/<id>/status-history
+
+# Débannir l'auteur des fixtures : son commentaire rejeté pour ban repart en modération
+curl -s -X POST http://localhost:8080/authors/banned-user/unban
 ```
 
 ## Configuration
@@ -92,8 +105,8 @@ docker compose exec php php bin/console messenger:failed:retry
 
 ## Architecture
 
-- `src/Domain/` : agrégats `Comment` et `Author`, enums de statut et de catégories, ports `CommentRepository`, `AuthorRepository` et `Moderator`.
-- `src/Application/` : commandes `SubmitComment` (synchrone) et `ModerateComment` (asynchrone), requêtes `GetComment` et `SearchComments`.
+- `src/Domain/` : agrégats `Comment` (avec son historique `CommentStatusChange`) et `Author`, enums de statut, d'origine et de catégories, ports `CommentRepository`, `AuthorRepository` et `Moderator`.
+- `src/Application/` : commandes `SubmitComment`, `ModerateCommentManually`, `BanAuthor` et `UnbanAuthor` (synchrones), `ModerateComment` (asynchrone) ; requêtes `GetComment`, `GetCommentStatusHistory`, `SearchComments` et `GetAuthor`.
 - `src/Infrastructure/` : repositories Doctrine, `Gpt4oMiniModerator` (OpenRouter), listener d'erreurs JSON, fixtures.
 - `src/UI/Api/` : controllers et DTOs d'entrée.
 

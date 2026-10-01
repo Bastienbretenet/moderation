@@ -57,7 +57,7 @@ final class ModerateCommentHandlerTest extends KernelTestCase
     public function testAlreadyModeratedCommentIsNotModeratedAgain(): void
     {
         $comment = $this->persistPendingComment();
-        $comment->publish('Aucun contenu illicite.', new DateTimeImmutable());
+        $comment->applyModerationDecision(ModerationDecision::approve('Aucun contenu illicite.'), new DateTimeImmutable());
         $this->entityManager->flush();
         $moderator = $this->createMock(Moderator::class);
         $moderator->expects(self::never())->method('moderate');

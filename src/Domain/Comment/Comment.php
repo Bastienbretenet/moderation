@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use SudOuest\Comment\Domain\Author\Author;
 use SudOuest\Comment\Domain\Comment\Exception\CommentAlreadyModeratedException;
+use SudOuest\Comment\Domain\Moderation\ModerationDecision;
 use Symfony\Component\Uid\Uuid;
 
 #[ORM\Entity]
@@ -68,6 +69,17 @@ final class Comment
         return $comment;
     }
 
+    public function applyModerationDecision(ModerationDecision $decision, DateTimeImmutable $moderatedAt): void
+    {
+        if ($decision->illegalContentCategory === null) {
+            $this->publish($decision->explanation, $moderatedAt);
+
+            return;
+        }
+
+        $this->reject($decision->illegalContentCategory, $decision->explanation, $moderatedAt);
+    }
+
     public function publish(string $explanation, DateTimeImmutable $moderatedAt): void
     {
         $this->assertPending();
@@ -89,6 +101,11 @@ final class Comment
         $this->category = $category;
         $this->moderationExplanation = $explanation;
         $this->moderatedAt = $moderatedAt;
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === ModerationStatus::Pending;
     }
 
     public function id(): Uuid
@@ -148,7 +165,7 @@ final class Comment
 
     private function assertPending(): void
     {
-        if ($this->status !== ModerationStatus::Pending) {
+        if (!$this->isPending()) {
             throw CommentAlreadyModeratedException::withId($this->id);
         }
     }

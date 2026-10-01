@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace SudOuest\Comment\Application\Command\SubmitComment;
 
 use Psr\Clock\ClockInterface;
+use SudOuest\Comment\Application\Command\ModerateComment\ModerateCommentCommand;
 use SudOuest\Comment\Domain\Author\AuthorRepository;
 use SudOuest\Comment\Domain\Comment\Comment;
 use SudOuest\Comment\Domain\Comment\CommentRepository;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Stamp\DispatchAfterCurrentBusStamp;
 use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -21,6 +24,7 @@ final readonly class SubmitCommentHandler
         private AuthorRepository $authorRepository,
         private ValidatorInterface $validator,
         private ClockInterface $clock,
+        private MessageBusInterface $messageBus,
     ) {
     }
 
@@ -45,6 +49,13 @@ final readonly class SubmitCommentHandler
         );
 
         $this->commentRepository->save($comment);
+
+        if ($comment->isPending()) {
+            $this->messageBus->dispatch(
+                new ModerateCommentCommand($comment->id()->toRfc4122()),
+                [new DispatchAfterCurrentBusStamp()],
+            );
+        }
 
         return $comment->id()->toRfc4122();
     }

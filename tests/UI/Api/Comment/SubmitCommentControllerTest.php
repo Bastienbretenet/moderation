@@ -23,7 +23,7 @@ final class SubmitCommentControllerTest extends WebTestCase
         $this->client = self::createClientWithDatabase();
     }
 
-    public function testSubmittedCommentIsAcceptedAndPending(): void
+    public function testLawfulCommentIsPublished(): void
     {
         $commentId = $this->submitComment([
             'publisher' => 'sudouest',
@@ -37,8 +37,26 @@ final class SubmitCommentControllerTest extends WebTestCase
         self::assertSame('article-123', $comment['source']);
         self::assertSame('user-42', $comment['authorId']);
         self::assertSame('Très bon article.', $comment['content']);
-        self::assertSame('pending', $comment['status']);
-        self::assertNull($comment['moderatedAt']);
+        self::assertSame('published', $comment['status']);
+        self::assertNull($comment['rejectionReason']);
+        self::assertNull($comment['category']);
+        self::assertNotNull($comment['moderatedAt']);
+    }
+
+    public function testIllegalCommentIsRejectedWithCategory(): void
+    {
+        $commentId = $this->submitComment([
+            'publisher' => 'sudouest',
+            'source' => 'article-123',
+            'content' => 'Commentaire illicite [moderation:defamation]',
+            'authorId' => 'user-42',
+        ]);
+
+        $comment = $this->getComment($commentId);
+        self::assertSame('rejected', $comment['status']);
+        self::assertSame('illegal_content', $comment['rejectionReason']);
+        self::assertSame('defamation', $comment['category']);
+        self::assertNotNull($comment['moderationExplanation']);
     }
 
     public function testSubmittedCommentWithoutAuthorIsAccepted(): void
@@ -51,7 +69,7 @@ final class SubmitCommentControllerTest extends WebTestCase
 
         $comment = $this->getComment($commentId);
         self::assertNull($comment['authorId']);
-        self::assertSame('pending', $comment['status']);
+        self::assertSame('published', $comment['status']);
     }
 
     public function testCommentFromBannedAuthorIsRejectedImmediately(): void

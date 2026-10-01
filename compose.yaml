@@ -28,6 +28,13 @@ services:
     volumes:
       - ./:/app
 
+  front:
+    build: docker/node
+    ports:
+      - "${FRONT_PORT:-5173}:5173"
+    volumes:
+      - ./front:/app
+
   database:
     image: postgres:18-alpine
     environment:

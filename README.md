@@ -50,11 +50,13 @@ Le worker garde le code en mémoire : après une modification du code, lancer `d
 | --- | --- | --- |
 | `POST` | `/comments` | Soumet un commentaire. Répond `202` avec son `id`. |
 | `GET` | `/comments/{id}` | Détail d'un commentaire, dont son statut de modération. |
+| `PATCH` | `/comments/{id}/status` | Modération manuelle : un opérateur choisit `published` ou `rejected`, avec un motif optionnel ([choix](docs/manual-moderation.md)). |
+| `GET` | `/comments/{id}/status-history` | Historique de tous les changements de statut (soumission, ban, LLM, opérateur). |
 | `GET` | `/comments` | Recherche paginée. Filtres : `publisher`, `status` (`pending`, `published`, `rejected`), `source`, `authorId`. Pagination : `page` (défaut 1), `limit` (défaut 20, max 100). |
 | `GET` | `/` | Nom et version de l'API. |
 | `GET` | `/health` | Health check. |
 
-Paramètres invalides : `422`. Commentaire inconnu : `404`.
+Paramètres invalides : `422`. Commentaire inconnu : `404`. Modération manuelle vers le statut actuel, ou modification concurrente : `409`.
 
 ```bash
 # Soumettre un commentaire
@@ -67,6 +69,11 @@ curl -s -X POST http://localhost:8080/comments -H 'Content-Type: application/jso
 
 # Rechercher
 curl -s 'http://localhost:8080/comments?publisher=sudouest&status=published'
+
+# Modérer manuellement, puis consulter l'historique
+curl -s -X PATCH http://localhost:8080/comments/<id>/status -H 'Content-Type: application/json' \
+  -d '{"status":"published","reason":"Critique légitime."}'
+curl -s http://localhost:8080/comments/<id>/status-history
 ```
 
 ## Configuration
@@ -92,8 +99,8 @@ docker compose exec php php bin/console messenger:failed:retry
 
 ## Architecture
 
-- `src/Domain/` : agrégats `Comment` et `Author`, enums de statut et de catégories, ports `CommentRepository`, `AuthorRepository` et `Moderator`.
-- `src/Application/` : commandes `SubmitComment` (synchrone) et `ModerateComment` (asynchrone), requêtes `GetComment` et `SearchComments`.
+- `src/Domain/` : agrégats `Comment` (avec son historique `CommentStatusChange`) et `Author`, enums de statut, d'origine et de catégories, ports `CommentRepository`, `AuthorRepository` et `Moderator`.
+- `src/Application/` : commandes `SubmitComment` et `ModerateCommentManually` (synchrones), `ModerateComment` (asynchrone) ; requêtes `GetComment`, `GetCommentStatusHistory` et `SearchComments`.
 - `src/Infrastructure/` : repositories Doctrine, `Gpt4oMiniModerator` (OpenRouter), listener d'erreurs JSON, fixtures.
 - `src/UI/Api/` : controllers et DTOs d'entrée.
 

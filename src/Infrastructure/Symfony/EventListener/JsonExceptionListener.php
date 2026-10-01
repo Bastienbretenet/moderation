@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace SudOuest\Comment\Infrastructure\Symfony\EventListener;
 
+use Doctrine\ORM\OptimisticLockException;
 use SudOuest\Comment\Domain\Comment\Exception\CommentNotFoundException;
+use SudOuest\Comment\Domain\Comment\Exception\CommentStatusUnchangedException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -33,6 +35,11 @@ final readonly class JsonExceptionListener
         $event->setResponse(match (true) {
             $exception instanceof ValidationFailedException => $this->validationFailedResponse($exception),
             $exception instanceof CommentNotFoundException => $this->errorResponse($exception->getMessage(), Response::HTTP_NOT_FOUND),
+            $exception instanceof CommentStatusUnchangedException => $this->errorResponse($exception->getMessage(), Response::HTTP_CONFLICT),
+            $exception instanceof OptimisticLockException => $this->errorResponse(
+                'The comment was modified concurrently, reload it and retry.',
+                Response::HTTP_CONFLICT,
+            ),
             $exception instanceof HttpExceptionInterface => $this->errorResponse($exception->getMessage(), $exception->getStatusCode()),
             default => $this->errorResponse(
                 $this->debug ? $exception->getMessage() : 'An internal error occurred.',

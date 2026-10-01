@@ -13,7 +13,7 @@ Lancement : `make build` +  `make up`
 
 **Hypothèses** : un auteur inconnu n'est pas banni; le ban s'applique à la soumission; après un échec définitif du LLM, le commentaire reste `pending` dans le failure transport.
 
-**Limites et suite** : les tests n'appellent jamais le LLM (stub à marqueurs `[moderation:<catégorie>]`) ; un appel coûte environ 0,0002 $, des tests réels demanderaient une clé à budget plafonné. Aucune extension optionnelle traitée : j'ai privilégié un périmètre obligatoire complet et testé. Ensuite : modération manuelle historisée, ban/déban, traçabilité des appels LLM, webhook Facebook.
+**Limites et suite** : les tests n'appellent jamais le LLM (stub à marqueurs `[moderation:<catégorie>]`) ; un appel coûte environ 0,0002 $, des tests réels demanderaient une clé à budget plafonné. Extension traitée : modération manuelle historisée ([manual-moderation.md](manual-moderation.md)), car elle corrige les erreurs du LLM. Ensuite : ban/déban, traçabilité des appels LLM, webhook Facebook.
 
 **Usage de l'IA** : code écrit avec Claude Code, étape par étape (voir les commits). Arbitrages :
 

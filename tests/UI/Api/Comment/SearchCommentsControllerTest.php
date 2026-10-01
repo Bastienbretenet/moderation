@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use SudOuest\Comment\Domain\Author\Author;
 use SudOuest\Comment\Domain\Comment\Comment;
 use SudOuest\Comment\Domain\Comment\IllegalContentCategory;
+use SudOuest\Comment\Domain\Moderation\ModerationDecision;
 use SudOuest\Comment\Tests\Support\CreatesClientWithDatabase;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -32,12 +33,15 @@ final class SearchCommentsControllerTest extends WebTestCase
         $entityManager->persist($secondAuthor);
 
         $publishedComment = $this->submitComment('first', 'sudouest', 'article-1', $firstAuthor, '2026-10-01 08:00:00');
-        $publishedComment->publish('RAS.', new DateTimeImmutable('2026-10-01 08:01:00'));
+        $publishedComment->applyModerationDecision(ModerationDecision::approve('RAS.'), new DateTimeImmutable('2026-10-01 08:01:00'));
         $rejectedComment = $this->submitComment('second', 'sudouest', 'article-2', null, '2026-10-01 09:00:00');
-        $rejectedComment->reject(IllegalContentCategory::Insult, 'Injure.', new DateTimeImmutable('2026-10-01 09:01:00'));
+        $rejectedComment->applyModerationDecision(
+            ModerationDecision::reject(IllegalContentCategory::Insult, 'Injure.'),
+            new DateTimeImmutable('2026-10-01 09:01:00'),
+        );
         $this->submitComment('third', 'sudouest', 'article-1', $secondAuthor, '2026-10-01 10:00:00');
         $otherPublisherComment = $this->submitComment('fourth', 'charentelibre', 'article-9', $firstAuthor, '2026-10-01 11:00:00');
-        $otherPublisherComment->publish('RAS.', new DateTimeImmutable('2026-10-01 11:01:00'));
+        $otherPublisherComment->applyModerationDecision(ModerationDecision::approve('RAS.'), new DateTimeImmutable('2026-10-01 11:01:00'));
         $this->submitComment('fifth', 'charentelibre', 'article-9', null, '2026-10-01 11:00:00');
 
         $entityManager->flush();

@@ -2,6 +2,8 @@
 
 > 📄 **[Mon analyse](docs/README.md)** : choix, hypothèses, limites et usage de l'IA.
 
+**Non demandé: j'ai ajouté une interface pour tester plus facilement**
+
 API Symfony 8 (DDD/CQRS) qui collecte les commentaires publiés sur les marques du groupe, les accepte immédiatement puis les fait modérer de façon asynchrone par un LLM, selon les catégories de contenus illicites du droit français ([règles de modération](docs/moderation.md)).
 
 ## Prérequis
@@ -18,16 +20,18 @@ make up
 make fixtures
 ```
 
-`make up` démarre trois conteneurs et attend qu'ils soient prêts :
+`make up` démarre quatre conteneurs et attend qu'ils soient prêts :
 
 | Service | Rôle |
 | --- | --- |
 | `php` | FrankenPHP (PHP 8.5). Au démarrage : `composer install` si `vendor/` manque, puis migrations Doctrine. |
 | `worker` | `messenger:consume async` : modère les commentaires en attente. Démarre une fois `php` prêt. |
 | `database` | PostgreSQL 18. |
+| `front` | Interface Vue 3 + Tailwind CSS (Vite). Au démarrage : `npm ci` si `node_modules/` manque. |
 
 - API : <http://localhost:8080>
 - Swagger UI : <http://localhost:8080/doc/>
+- Interface : <http://localhost:5173>
 
 `make fixtures` charge un jeu de démonstration, dont l'auteur banni `banned-user`. Il vide les tables `author` et `comment` avant le chargement.
 

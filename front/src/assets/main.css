@@ -1,0 +1,68 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-fog: #e6ecee;
+  --color-paper: #fbfcfc;
+  --color-ink: #16233a;
+  --color-ink-soft: #4a5a70;
+  --color-rule: #c9d3d8;
+  --color-correction: #c2272d;
+  --color-pine: #2e6a4a;
+  --color-resin: #9a6510;
+  --color-tide: #3d6f8c;
+  --color-dune: #e8d9b5;
+
+  --font-ui: 'Archivo', system-ui, sans-serif;
+  --font-text: 'Newsreader', Georgia, serif;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-fog);
+    color: var(--color-ink);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-tide);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-tide) 25%, transparent);
+  }
+}
+
+@keyframes mark-drawn {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes just-posted {
+  from {
+    background-color: color-mix(in srgb, var(--color-tide) 14%, transparent);
+  }
+
+  to {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
